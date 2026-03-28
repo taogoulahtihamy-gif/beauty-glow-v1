@@ -1,6 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { pool } from '../config/db.js';
 import { requireAdmin } from '../middleware/auth.js';
@@ -8,9 +9,14 @@ import { requireAdmin } from '../middleware/auth.js';
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '..', '..', 'uploads');
+
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, path.join(__dirname, '..', '..', 'uploads')),
+  destination: (_req, _file, cb) => cb(null, uploadsDir),
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
@@ -18,6 +24,13 @@ const storage = multer.diskStorage({
 });
 
 const upload = multer({ storage });
+
+function getBaseUrl(req) {
+  return (
+    process.env.PUBLIC_BACKEND_URL ||
+    `${req.protocol}://${req.get('host')}`
+  );
+}
 
 router.get('/dashboard', requireAdmin, async (_req, res) => {
   const [bookings, services, gallery] = await Promise.all([
@@ -36,7 +49,11 @@ router.get('/dashboard', requireAdmin, async (_req, res) => {
 router.get('/content', requireAdmin, async (_req, res) => {
   const settings = await pool.query('SELECT * FROM site_settings WHERE id = 1');
   const gallery = await pool.query('SELECT * FROM gallery_images ORDER BY id DESC');
-  res.json({ settings: settings.rows[0], gallery: gallery.rows });
+
+  res.json({
+    settings: settings.rows[0],
+    gallery: gallery.rows,
+  });
 });
 
 router.patch('/content', requireAdmin, async (req, res) => {
@@ -87,24 +104,41 @@ router.patch('/content', requireAdmin, async (req, res) => {
       contactWhatsapp || null,
     ]
   );
+
   res.json(result.rows[0]);
 });
 
 router.post('/upload', requireAdmin, upload.single('image'), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: 'Image requise.' });
-  const url = `http://localhost:${process.env.PORT || 5000}/uploads/${req.file.filename}`;
-  res.status(201).json({ url });
+  if (!req.file) {
+    return res.status(400).json({ message: 'Image requise.' });
+  }
+
+  const baseUrl = getBaseUrl(req);
+  const url = `${baseUrl}/uploads/${req.file.filename}`;
+
+  res.status(201).json({
+    url,
+    filename: req.file.filename,
+  });
 });
 
 router.post('/gallery', requireAdmin, async (req, res) => {
   const { imageUrl, altText, category } = req.body;
+
+  if (!imageUrl) {
+    return res.status(400).json({ message: 'imageUrl est requis.' });
+  }
+
   const result = await pool.query(
     `INSERT INTO gallery_images (image_url, alt_text, category)
      VALUES ($1, $2, $3)
      RETURNING *`,
     [imageUrl, altText || 'Photo Beauty Glow', category || 'Galerie']
   );
-  res.status(201).json(result.rows[0]);
+
+  res.status(201).json({
+    image: result.rows[0],
+  });
 });
 
 router.delete('/gallery/:id', requireAdmin, async (req, res) => {
