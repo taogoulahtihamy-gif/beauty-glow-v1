@@ -34,6 +34,8 @@ export default function AdminDashboardPage() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadData, setUploadData] = useState(null);
   const [message, setMessage] = useState('');
+  const [uploadError, setUploadError] = useState('');
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   const [activeTab, setActiveTab] = useState('reservations');
   const [statusFilter, setStatusFilter] = useState('toutes');
@@ -100,27 +102,70 @@ export default function AdminDashboardPage() {
   };
 
   const handleUploadAndAdd = async () => {
-    if (!selectedFile) return;
+    setUploadError('');
+    setMessage('');
+
+    if (!selectedFile) {
+      setUploadError('Choisis une image avant de lancer l’upload.');
+      return;
+    }
 
     setUploading(true);
+
     try {
       const uploaded = await api.uploadImage(selectedFile);
       setUploadData(uploaded);
 
-      await api.addGalleryImage({
+      const payload = {
         imageUrl: uploaded.url,
-        altText: galleryForm.altText || selectedFile.name || 'Photo Beauty Glow',
+        altText: galleryForm.altText?.trim() || selectedFile.name || 'Photo Beauty Glow',
         category: galleryForm.category || 'Galerie',
+      };
+
+      const createdImage = await api.addGalleryImage(payload);
+
+      setMessage(`Image ajoutée avec succès dans la catégorie "${payload.category}".`);
+
+      setContent((prev) => {
+        if (!prev) return prev;
+
+        const gallery = Array.isArray(prev.gallery) ? prev.gallery : [];
+        const imageToInsert =
+          createdImage?.image ||
+          createdImage?.data ||
+          {
+            id: Date.now(),
+            image_url: payload.imageUrl,
+            alt_text: payload.altText,
+            category: payload.category,
+          };
+
+        return {
+          ...prev,
+          gallery: [imageToInsert, ...gallery],
+        };
       });
 
-      setMessage('Image uploadée et ajoutée à la galerie avec succès.');
+      setStats((prev) =>
+        prev
+          ? {
+              ...prev,
+              gallery: (prev.gallery ?? 0) + 1,
+            }
+          : prev
+      );
+
       setSelectedFile(null);
       setGalleryForm({
         altText: '',
         category: 'Galerie',
       });
+      setFileInputKey((prev) => prev + 1);
 
       await load();
+    } catch (error) {
+      console.error(error);
+      setUploadError(error.message || "L'image n'a pas pu être ajoutée.");
     } finally {
       setUploading(false);
     }
@@ -129,6 +174,8 @@ export default function AdminDashboardPage() {
   const saveContent = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setMessage('');
+
     try {
       await api.updateContent(formValues);
       setMessage("Contenu de l'accueil mis à jour.");
@@ -159,7 +206,7 @@ export default function AdminDashboardPage() {
         altText,
         category,
       });
-      setMessage('Image ajoutée à la galerie.');
+      setMessage(`Image ajoutée à la galerie dans "${category}".`);
     }
 
     await load();
@@ -178,11 +225,9 @@ export default function AdminDashboardPage() {
           <div>
             <span className="eyebrow">Admin</span>
             <h1>Dashboard admin</h1>
-            <p>
-              Tu pilotes les réservations, les photos et le contenu sans aller
-              dans le code.
-            </p>
+            <p>Tu pilotes les réservations, les photos et le contenu sans aller dans le code.</p>
             {message ? <p className="info-text">{message}</p> : null}
+            {uploadError ? <p className="error-text">{uploadError}</p> : null}
           </div>
 
           <button className="btn btn-light" type="button" onClick={logout}>
@@ -444,6 +489,7 @@ export default function AdminDashboardPage() {
                 <label className="field full-width">
                   <span>Choisir une image</span>
                   <input
+                    key={fileInputKey}
                     type="file"
                     accept="image/*"
                     onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
@@ -490,15 +536,11 @@ export default function AdminDashboardPage() {
               </div>
 
               {selectedFile ? (
-                <p className="small-note">
-                  Fichier sélectionné : {selectedFile.name}
-                </p>
+                <p className="small-note">Fichier sélectionné : {selectedFile.name}</p>
               ) : null}
 
               {uploadData?.url ? (
-                <p className="small-note">
-                  Dernière image uploadée avec succès.
-                </p>
+                <p className="small-note">Dernière image uploadée avec succès.</p>
               ) : null}
             </div>
 
@@ -541,8 +583,7 @@ export default function AdminDashboardPage() {
                 <div>
                   <h2>Bibliothèque d’images uploadées</h2>
                   <p>
-                    Réutilise une image déjà uploadée pour le hero, la section à
-                    propos ou la galerie.
+                    Réutilise une image déjà uploadée pour le hero, la section à propos ou la galerie.
                   </p>
                 </div>
 
