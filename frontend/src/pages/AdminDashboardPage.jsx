@@ -44,6 +44,7 @@ export default function AdminDashboardPage() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [updatingBookingId, setUpdatingBookingId] = useState(null);
+  const [deletingImageId, setDeletingImageId] = useState(null);
 
   const [galleryForm, setGalleryForm] = useState({
     altText: '',
@@ -104,7 +105,9 @@ export default function AdminDashboardPage() {
         }
       }
 
-      setMessage(`Réservation ${status === 'confirmee' ? 'confirmée' : 'annulée'} avec succès.`);
+      setMessage(
+        `Réservation ${status === 'confirmee' ? 'confirmée' : 'annulée'} avec succès.`
+      );
       await load();
     } catch (error) {
       console.error(error);
@@ -240,6 +243,7 @@ export default function AdminDashboardPage() {
   const deleteImage = async (id) => {
     setMessage('');
     setUploadError('');
+    setDeletingImageId(id);
 
     try {
       await api.deleteGalleryImage(id);
@@ -248,6 +252,8 @@ export default function AdminDashboardPage() {
     } catch (error) {
       console.error(error);
       setUploadError(error.message || 'Impossible de supprimer cette image.');
+    } finally {
+      setDeletingImageId(null);
     }
   };
 
@@ -263,7 +269,7 @@ export default function AdminDashboardPage() {
             {uploadError ? <p className="error-text">{uploadError}</p> : null}
           </div>
 
-          <button className="btn btn-light" type="button" onClick={logout}>
+          <button className="btn btn-light admin-logout-btn" type="button" onClick={logout}>
             Déconnexion
           </button>
         </div>
@@ -283,7 +289,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="admin-actions admin-tab-row">
+        <div className="admin-tab-switch">
           <button
             className={`filter-chip ${activeTab === 'reservations' ? 'active' : ''}`}
             type="button"
@@ -303,12 +309,12 @@ export default function AdminDashboardPage() {
 
         {activeTab === 'reservations' ? (
           <div className="card admin-panel">
-            <div className="admin-actions filter-pills">
+            <div className="admin-filter-row">
               {[
                 ['toutes', 'Toutes'],
-                ['en_attente', 'en attente'],
-                ['confirmee', 'confirmée'],
-                ['annulee', 'annulée'],
+                ['en_attente', 'En attente'],
+                ['confirmee', 'Confirmées'],
+                ['annulee', 'Annulées'],
               ].map(([value, label]) => (
                 <button
                   key={value}
@@ -349,9 +355,9 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td>
-                        <div className="compact-actions">
+                        <div className="booking-actions-inline">
                           <button
-                            className="btn btn-small btn-primary"
+                            className="btn btn-small btn-primary admin-mini-btn"
                             type="button"
                             disabled={updatingBookingId === booking.id}
                             onClick={() => updateStatus(booking.id, 'confirmee')}
@@ -360,7 +366,7 @@ export default function AdminDashboardPage() {
                           </button>
 
                           <button
-                            className="btn btn-small btn-light"
+                            className="btn btn-small btn-light admin-mini-btn"
                             type="button"
                             disabled={updatingBookingId === booking.id}
                             onClick={() => updateStatus(booking.id, 'annulee')}
@@ -419,7 +425,7 @@ export default function AdminDashboardPage() {
 
                     <div className="mobile-booking-actions">
                       <button
-                        className="btn btn-small btn-primary"
+                        className="btn btn-small btn-primary admin-mini-btn"
                         type="button"
                         disabled={updatingBookingId === booking.id}
                         onClick={() => updateStatus(booking.id, 'confirmee')}
@@ -428,7 +434,7 @@ export default function AdminDashboardPage() {
                       </button>
 
                       <button
-                        className="btn btn-small btn-light"
+                        className="btn btn-small btn-light admin-mini-btn"
                         type="button"
                         disabled={updatingBookingId === booking.id}
                         onClick={() => updateStatus(booking.id, 'annulee')}
@@ -621,7 +627,7 @@ export default function AdminDashboardPage() {
                 </label>
               </div>
 
-              <div className="admin-actions admin-upload-row">
+              <div className="admin-upload-actions">
                 <button
                   className="btn btn-primary"
                   type="button"
@@ -679,9 +685,7 @@ export default function AdminDashboardPage() {
               <div className="admin-library-head">
                 <div>
                   <h2>Bibliothèque d’images uploadées</h2>
-                  <p>
-                    Réutilise une image déjà uploadée pour le hero, la section à propos ou la galerie.
-                  </p>
+                  <p>Réutilise une image déjà uploadée pour le hero, la section à propos ou la galerie.</p>
                 </div>
 
                 <button
@@ -710,27 +714,27 @@ export default function AdminDashboardPage() {
 
                       <div className="admin-card-actions">
                         <button
-                          className="btn btn-small btn-light"
+                          className="btn btn-small btn-light admin-mini-btn"
                           type="button"
                           onClick={() => applyImage('hero', image)}
                         >
-                          Mettre en hero
+                          Hero
                         </button>
 
                         <button
-                          className="btn btn-small btn-light"
+                          className="btn btn-small btn-light admin-mini-btn"
                           type="button"
                           onClick={() => applyImage('about', image)}
                         >
-                          Mettre à propos
+                          À propos
                         </button>
 
                         <button
-                          className="btn btn-small btn-primary"
+                          className="btn btn-small btn-primary admin-mini-btn"
                           type="button"
                           onClick={() => applyImage('gallery', image)}
                         >
-                          Dupliquer en galerie
+                          Galerie
                         </button>
                       </div>
                     </article>
@@ -762,7 +766,7 @@ export default function AdminDashboardPage() {
 
                     <div className="admin-card-actions">
                       <button
-                        className="btn btn-small btn-light"
+                        className="btn btn-small btn-light admin-mini-btn"
                         type="button"
                         onClick={() => applyImage('hero', image)}
                       >
@@ -770,7 +774,7 @@ export default function AdminDashboardPage() {
                       </button>
 
                       <button
-                        className="btn btn-small btn-light"
+                        className="btn btn-small btn-light admin-mini-btn"
                         type="button"
                         onClick={() => applyImage('about', image)}
                       >
@@ -778,11 +782,12 @@ export default function AdminDashboardPage() {
                       </button>
 
                       <button
-                        className="btn btn-small btn-primary"
+                        className="btn btn-small admin-delete-btn"
                         type="button"
+                        disabled={deletingImageId === image.id}
                         onClick={() => deleteImage(image.id)}
                       >
-                        Supprimer
+                        {deletingImageId === image.id ? 'Suppression...' : 'Supprimer'}
                       </button>
                     </div>
                   </article>
@@ -794,4 +799,4 @@ export default function AdminDashboardPage() {
       </div>
     </section>
   );
-} 
+}

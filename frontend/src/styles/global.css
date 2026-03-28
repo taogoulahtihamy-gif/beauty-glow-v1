@@ -1871,80 +1871,81 @@ td {
   .hero-stat-card span {
     font-size: 0.88rem;
   }
-}
-.table-wrap {
-  width: 100%;
-  overflow-x: auto;
-  border-radius: 22px;
+  }
+/* =========================
+   ADMIN DASHBOARD CLEAN
+========================= */
+
+.admin-layout {
+  display: grid;
+  gap: 24px;
 }
 
-.table-wrap table {
-  width: 100%;
-  min-width: 860px;
-  border-collapse: collapse;
+.admin-header-row,
+.admin-library-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.table-wrap th {
-  background: #fff7f3;
-  color: var(--text);
-  font-weight: 700;
-  white-space: nowrap;
+.admin-header-row h1 {
+  margin-bottom: 8px;
 }
 
-.table-wrap th,
-.table-wrap td {
-  padding: 14px 12px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  vertical-align: middle;
+.admin-logout-btn {
+  min-width: 160px;
 }
 
-.table-wrap tbody tr:hover {
-  background: rgba(255, 247, 243, 0.45);
+.admin-stats-grid {
+  margin-bottom: 0;
 }
 
-.table-wrap td:last-child,
-.table-wrap th:last-child {
-  min-width: 190px;
-}
-
-.compact-actions {
+.admin-tab-switch {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin: 0;
+  gap: 12px;
 }
 
-.compact-actions .btn {
-  margin: 0;
+.admin-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
-.compact-actions .btn-small {
-  min-width: 88px;
-  padding: 9px 12px;
+.admin-panel {
+  padding: 24px;
 }
 
-.empty-cell {
-  text-align: center;
-  color: var(--muted);
-  padding: 24px 12px;
+.admin-sections {
+  display: grid;
+  gap: 24px;
 }
 
-@media (max-width: 640px) {
-  .table-wrap table {
-    min-width: 760px;
-  }
-
-  .compact-actions {
-    flex-wrap: nowrap;
-  }
-
-  .compact-actions .btn-small {
-    white-space: nowrap;
-  }
+.admin-save-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
 }
 
+.admin-save-row .btn {
+  min-width: 220px;
+}
 
+.admin-upload-form {
+  margin-top: 16px;
+}
+
+.admin-upload-actions {
+  display: flex;
+  justify-content: flex-start;
+  margin-top: 18px;
+}
+
+.admin-upload-actions .btn {
+  min-width: 220px;
+}
 
 .desktop-bookings-table {
   display: block;
@@ -1962,7 +1963,7 @@ td {
 
 .table-wrap table {
   width: 100%;
-  min-width: 860px;
+  min-width: 820px;
   border-collapse: collapse;
 }
 
@@ -1985,25 +1986,23 @@ td {
   background: rgba(255, 247, 243, 0.45);
 }
 
-.table-wrap td:last-child,
-.table-wrap th:last-child {
-  min-width: 190px;
-}
-
-.compact-actions {
+.booking-actions-inline {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin: 0;
 }
 
-.compact-actions .btn {
-  margin: 0;
+.admin-mini-btn {
+  padding: 8px 12px;
+  min-width: 0;
+  font-size: 0.84rem;
+  line-height: 1.2;
 }
 
-.compact-actions .btn-small {
-  min-width: 88px;
-  padding: 9px 12px;
+.empty-cell {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px 12px;
 }
 
 .mobile-booking-card {
@@ -2043,6 +2042,121 @@ td {
   padding: 18px;
 }
 
+.admin-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.admin-gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  align-items: stretch;
+}
+
+.admin-media-card,
+.admin-gallery-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 24px;
+  min-height: 100%;
+}
+
+.admin-media-image {
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
+  background: #f8f1ec;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.admin-media-image img,
+.admin-media-image .preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-media-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 16px 10px;
+}
+
+.admin-media-body strong {
+  font-size: 0.98rem;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.admin-category-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: #fff6f1;
+  border: 1px solid rgba(207, 143, 147, 0.2);
+  color: var(--primary-dark);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.admin-card-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 16px 16px;
+  margin-top: auto;
+}
+
+.admin-card-actions .btn {
+  width: 100%;
+}
+
+.admin-delete-btn {
+  background: #fff1f2;
+  color: #b33d4e;
+  border: 1px solid rgba(179, 61, 78, 0.15);
+}
+
+.admin-delete-btn:hover {
+  background: #ffe7ea;
+}
+
+.library-empty {
+  display: inline-flex;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #cfe1d2;
+  background: #edf6ef;
+  color: #2f5f39;
+}
+
+@media (max-width: 980px) {
+  .admin-gallery-grid,
+  .admin-preview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-header-row,
+  .admin-library-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-logout-btn,
+  .admin-save-row .btn,
+  .admin-upload-actions .btn {
+    width: 100%;
+    min-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
   .desktop-bookings-table {
     display: none;
@@ -2053,64 +2167,61 @@ td {
     gap: 14px;
   }
 
-  .mobile-booking-actions {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-header-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .admin-header-row .btn {
-    width: 100%;
-  }
-
-  .admin-tab-row {
+  .admin-tab-switch {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
   }
 
-  .filter-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .filter-pills .filter-chip {
+  .admin-filter-row .filter-chip {
     flex: 1 1 calc(50% - 10px);
     text-align: center;
   }
 
-  .admin-upload-row .btn {
+  .mobile-booking-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-gallery-grid,
+  .admin-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-card-actions .btn {
     width: 100%;
-  }
-
-  .admin-save-row .btn {
-    width: 100%;
-  }
-
-  .admin-media-body strong {
-    word-break: break-word;
-  }
-
-  .admin-category-badge {
-    max-width: 100%;
-    word-break: break-word;
   }
 }
 
 @media (max-width: 640px) {
+  .admin-panel {
+    padding: 18px;
+  }
+
+  .admin-tab-switch {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-filter-row .filter-chip {
+    flex: 1 1 100%;
+  }
+
   .mobile-booking-card {
     padding: 14px;
   }
 
-  .filter-pills .filter-chip {
-    flex: 1 1 100%;
+  .admin-media-image {
+    height: 210px;
   }
 
-  .admin-tab-row {
-    grid-template-columns: 1fr;
+  .admin-media-body {
+    padding: 14px 14px 10px;
+  }
+
+  .admin-card-actions {
+    padding: 0 14px 14px;
   }
 }
