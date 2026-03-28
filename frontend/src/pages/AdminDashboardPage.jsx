@@ -269,87 +269,87 @@ export default function AdminDashboardPage() {
         </div>
 
         {activeTab === 'reservations' ? (
-          <div className="card admin-panel">
-            <div className="admin-actions filter-pills">
-              {[
-                ['toutes', 'Toutes'],
-                ['en_attente', 'en attente'],
-                ['confirmee', 'confirmée'],
-                ['annulee', 'annulée'],
-              ].map(([value, label]) => (
-                <button
-                  key={value}
-                  className={`filter-chip ${statusFilter === value ? 'active' : ''}`}
-                  type="button"
-                  onClick={() => setStatusFilter(value)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+  <div className="card admin-panel">
+    <div className="admin-actions filter-pills">
+      {[
+        ['toutes', 'Toutes'],
+        ['en_attente', 'en attente'],
+        ['confirmee', 'confirmée'],
+        ['annulee', 'annulée'],
+      ].map(([value, label]) => (
+        <button
+          key={value}
+          className={`filter-chip ${statusFilter === value ? 'active' : ''}`}
+          type="button"
+          onClick={() => setStatusFilter(value)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
 
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Nom</th>
-                    <th>Téléphone</th>
-                    <th>Prestation</th>
-                    <th>Date</th>
-                    <th>Heure</th>
-                    <th>Statut</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Nom</th>
+            <th>Téléphone</th>
+            <th>Prestation</th>
+            <th>Date</th>
+            <th>Heure</th>
+            <th>Statut</th>
+            <th>Action</th>
+          </tr>
+        </thead>
 
-                <tbody>
-                  {filteredBookings.map((booking) => (
-                    <tr key={booking.id}>
-                      <td>{booking.customer_name}</td>
-                      <td>{booking.customer_phone}</td>
-                      <td>{booking.service_name}</td>
-                      <td>{booking.booking_date}</td>
-                      <td>{booking.booking_time}</td>
-                      <td>
-                        <span className={`status-pill ${booking.status}`}>
-                          {booking.status}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="admin-actions compact-actions">
-                          <button
-                            className="btn btn-small btn-primary"
-                            type="button"
-                            onClick={() => updateStatus(booking.id, 'confirmee')}
-                          >
-                            Confirmer
-                          </button>
+        <tbody>
+          {filteredBookings.map((booking) => (
+            <tr key={booking.id}>
+              <td>{booking.customer_name}</td>
+              <td>{booking.customer_phone}</td>
+              <td>{booking.service_name}</td>
+              <td>{booking.booking_date}</td>
+              <td>{booking.booking_time}</td>
+              <td>
+                <span className={`status-pill ${booking.status}`}>
+                  {booking.status}
+                </span>
+              </td>
+              <td>
+                <div className="compact-actions">
+                  <button
+                    className="btn btn-small btn-primary"
+                    type="button"
+                    onClick={() => updateStatus(booking.id, 'confirmee')}
+                  >
+                    Confirmer
+                  </button>
 
-                          <button
-                            className="btn btn-small btn-light"
-                            type="button"
-                            onClick={() => updateStatus(booking.id, 'annulee')}
-                          >
-                            Annuler
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  <button
+                    className="btn btn-small btn-light"
+                    type="button"
+                    onClick={() => updateStatus(booking.id, 'annulee')}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
 
-                  {!filteredBookings.length ? (
-                    <tr>
-                      <td colSpan="7" className="empty-cell">
-                        Aucune réservation pour ce filtre.
-                      </td>
-                    </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <div className="admin-sections">
+          {!filteredBookings.length ? (
+            <tr>
+              <td colSpan="7" className="empty-cell">
+                Aucune réservation pour ce filtre.
+              </td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+    </div>
+  </div>
+) : (
+                 <div className="admin-sections">
             <div className="card admin-panel">
               <h2>Accueil modifiable</h2>
 
