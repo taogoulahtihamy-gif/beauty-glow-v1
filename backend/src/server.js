@@ -10,18 +10,32 @@ import bookingsRoutes from './routes/bookings.js';
 import adminRoutes from './routes/admin.js';
 
 dotenv.config();
+
 const app = express();
 const port = process.env.PORT || 5000;
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://beauty-glow-v1.vercel.app',
+  ],
+  credentials: true,
+}));
+
 app.use(express.json({ limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 app.get('/api/health', async (_req, res) => {
-  const result = await pool.query('SELECT NOW()');
-  res.json({ status: 'ok', now: result.rows[0].now });
+  try {
+    const result = await pool.query('SELECT NOW()');
+    res.json({ status: 'ok', now: result.rows[0].now });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erreur base de données' });
+  }
 });
 
 app.use('/api/auth', authRoutes);
