@@ -43,6 +43,7 @@ export default function AdminDashboardPage() {
   const [formValues, setFormValues] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [updatingBookingId, setUpdatingBookingId] = useState(null);
 
   const [galleryForm, setGalleryForm] = useState({
     altText: '',
@@ -57,7 +58,7 @@ export default function AdminDashboardPage() {
     ]);
 
     setStats(dashboard);
-    setBookings(bookingList);
+    setBookings(Array.isArray(bookingList) ? bookingList : []);
     setContent(contentData);
 
     setFormValues({
@@ -89,16 +90,28 @@ export default function AdminDashboardPage() {
   }, [content]);
 
   const updateStatus = async (id, status) => {
-    const data = await api.updateBookingStatus(id, status);
+    setMessage('');
+    setUploadError('');
+    setUpdatingBookingId(id);
 
-    if (data.clientMessage) {
-      alert(`Message client prêt :\n\n${data.clientMessage}`);
-      if (data.clientWhatsAppUrl) {
-        window.open(data.clientWhatsAppUrl, '_blank');
+    try {
+      const data = await api.updateBookingStatus(id, status);
+
+      if (data?.clientMessage) {
+        alert(`Message client prêt :\n\n${data.clientMessage}`);
+        if (data.clientWhatsAppUrl) {
+          window.open(data.clientWhatsAppUrl, '_blank');
+        }
       }
-    }
 
-    await load();
+      setMessage(`Réservation ${status === 'confirmee' ? 'confirmée' : 'annulée'} avec succès.`);
+      await load();
+    } catch (error) {
+      console.error(error);
+      setUploadError(error.message || 'Impossible de mettre à jour la réservation.');
+    } finally {
+      setUpdatingBookingId(null);
+    }
   };
 
   const handleUploadAndAdd = async () => {
@@ -133,7 +146,7 @@ export default function AdminDashboardPage() {
         const imageToInsert =
           createdImage?.image ||
           createdImage?.data ||
-          {
+          createdImage || {
             id: Date.now(),
             image_url: payload.imageUrl,
             alt_text: payload.altText,
@@ -175,47 +188,67 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     setSaving(true);
     setMessage('');
+    setUploadError('');
 
     try {
       await api.updateContent(formValues);
       setMessage("Contenu de l'accueil mis à jour.");
       await load();
+    } catch (error) {
+      console.error(error);
+      setUploadError(error.message || 'Impossible de sauvegarder le contenu.');
     } finally {
       setSaving(false);
     }
   };
 
   const applyImage = async (type, image) => {
-    const url = image.image_url || image.url;
-    const category = image.category || 'Galerie';
-    const altText = image.alt_text || 'Photo Beauty Glow';
+    setMessage('');
+    setUploadError('');
 
-    if (type === 'hero') {
-      await api.updateContent({ heroImage: url });
-      setMessage('Image hero mise à jour.');
+    try {
+      const url = image.image_url || image.url;
+      const category = image.category || 'Galerie';
+      const altText = image.alt_text || 'Photo Beauty Glow';
+
+      if (type === 'hero') {
+        await api.updateContent({ heroImage: url });
+        setMessage('Image hero mise à jour.');
+      }
+
+      if (type === 'about') {
+        await api.updateContent({ aboutImage: url });
+        setMessage('Image à propos mise à jour.');
+      }
+
+      if (type === 'gallery') {
+        await api.addGalleryImage({
+          imageUrl: url,
+          altText,
+          category,
+        });
+        setMessage(`Image ajoutée à la galerie dans "${category}".`);
+      }
+
+      await load();
+    } catch (error) {
+      console.error(error);
+      setUploadError(error.message || "Impossible d'utiliser cette image.");
     }
-
-    if (type === 'about') {
-      await api.updateContent({ aboutImage: url });
-      setMessage('Image à propos mise à jour.');
-    }
-
-    if (type === 'gallery') {
-      await api.addGalleryImage({
-        imageUrl: url,
-        altText,
-        category,
-      });
-      setMessage(`Image ajoutée à la galerie dans "${category}".`);
-    }
-
-    await load();
   };
 
   const deleteImage = async (id) => {
-    await api.deleteGalleryImage(id);
-    setMessage('Image supprimée.');
-    await load();
+    setMessage('');
+    setUploadError('');
+
+    try {
+      await api.deleteGalleryImage(id);
+      setMessage('Image supprimée.');
+      await load();
+    } catch (error) {
+      console.error(error);
+      setUploadError(error.message || 'Impossible de supprimer cette image.');
+    }
   };
 
   return (
@@ -269,87 +302,151 @@ export default function AdminDashboardPage() {
         </div>
 
         {activeTab === 'reservations' ? (
-  <div className="card admin-panel">
-    <div className="admin-actions filter-pills">
-      {[
-        ['toutes', 'Toutes'],
-        ['en_attente', 'en attente'],
-        ['confirmee', 'confirmée'],
-        ['annulee', 'annulée'],
-      ].map(([value, label]) => (
-        <button
-          key={value}
-          className={`filter-chip ${statusFilter === value ? 'active' : ''}`}
-          type="button"
-          onClick={() => setStatusFilter(value)}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+          <div className="card admin-panel">
+            <div className="admin-actions filter-pills">
+              {[
+                ['toutes', 'Toutes'],
+                ['en_attente', 'en attente'],
+                ['confirmee', 'confirmée'],
+                ['annulee', 'annulée'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  className={`filter-chip ${statusFilter === value ? 'active' : ''}`}
+                  type="button"
+                  onClick={() => setStatusFilter(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-    <div className="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Nom</th>
-            <th>Téléphone</th>
-            <th>Prestation</th>
-            <th>Date</th>
-            <th>Heure</th>
-            <th>Statut</th>
-            <th>Action</th>
-          </tr>
-        </thead>
+            <div className="table-wrap desktop-bookings-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nom</th>
+                    <th>Téléphone</th>
+                    <th>Prestation</th>
+                    <th>Date</th>
+                    <th>Heure</th>
+                    <th>Statut</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
 
-        <tbody>
-          {filteredBookings.map((booking) => (
-            <tr key={booking.id}>
-              <td>{booking.customer_name}</td>
-              <td>{booking.customer_phone}</td>
-              <td>{booking.service_name}</td>
-              <td>{booking.booking_date}</td>
-              <td>{booking.booking_time}</td>
-              <td>
-                <span className={`status-pill ${booking.status}`}>
-                  {booking.status}
-                </span>
-              </td>
-              <td>
-                <div className="compact-actions">
-                  <button
-                    className="btn btn-small btn-primary"
-                    type="button"
-                    onClick={() => updateStatus(booking.id, 'confirmee')}
-                  >
-                    Confirmer
-                  </button>
+                <tbody>
+                  {filteredBookings.map((booking) => (
+                    <tr key={booking.id}>
+                      <td>{booking.customer_name}</td>
+                      <td>{booking.customer_phone}</td>
+                      <td>{booking.service_name}</td>
+                      <td>{booking.booking_date}</td>
+                      <td>{booking.booking_time}</td>
+                      <td>
+                        <span className={`status-pill ${booking.status}`}>
+                          {booking.status}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="compact-actions">
+                          <button
+                            className="btn btn-small btn-primary"
+                            type="button"
+                            disabled={updatingBookingId === booking.id}
+                            onClick={() => updateStatus(booking.id, 'confirmee')}
+                          >
+                            {updatingBookingId === booking.id ? '...' : 'Confirmer'}
+                          </button>
 
-                  <button
-                    className="btn btn-small btn-light"
-                    type="button"
-                    onClick={() => updateStatus(booking.id, 'annulee')}
-                  >
-                    Annuler
-                  </button>
+                          <button
+                            className="btn btn-small btn-light"
+                            type="button"
+                            disabled={updatingBookingId === booking.id}
+                            onClick={() => updateStatus(booking.id, 'annulee')}
+                          >
+                            {updatingBookingId === booking.id ? '...' : 'Annuler'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {!filteredBookings.length ? (
+                    <tr>
+                      <td colSpan="7" className="empty-cell">
+                        Aucune réservation pour ce filtre.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mobile-bookings-list">
+              {filteredBookings.length ? (
+                filteredBookings.map((booking) => (
+                  <article key={booking.id} className="card mobile-booking-card">
+                    <div className="mobile-booking-row">
+                      <strong>Nom</strong>
+                      <span>{booking.customer_name}</span>
+                    </div>
+
+                    <div className="mobile-booking-row">
+                      <strong>Téléphone</strong>
+                      <span>{booking.customer_phone}</span>
+                    </div>
+
+                    <div className="mobile-booking-row">
+                      <strong>Prestation</strong>
+                      <span>{booking.service_name}</span>
+                    </div>
+
+                    <div className="mobile-booking-row">
+                      <strong>Date</strong>
+                      <span>{booking.booking_date}</span>
+                    </div>
+
+                    <div className="mobile-booking-row">
+                      <strong>Heure</strong>
+                      <span>{booking.booking_time}</span>
+                    </div>
+
+                    <div className="mobile-booking-row">
+                      <strong>Statut</strong>
+                      <span className={`status-pill ${booking.status}`}>{booking.status}</span>
+                    </div>
+
+                    <div className="mobile-booking-actions">
+                      <button
+                        className="btn btn-small btn-primary"
+                        type="button"
+                        disabled={updatingBookingId === booking.id}
+                        onClick={() => updateStatus(booking.id, 'confirmee')}
+                      >
+                        {updatingBookingId === booking.id ? '...' : 'Confirmer'}
+                      </button>
+
+                      <button
+                        className="btn btn-small btn-light"
+                        type="button"
+                        disabled={updatingBookingId === booking.id}
+                        onClick={() => updateStatus(booking.id, 'annulee')}
+                      >
+                        {updatingBookingId === booking.id ? '...' : 'Annuler'}
+                      </button>
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="empty-cell mobile-empty-bookings">
+                  Aucune réservation pour ce filtre.
                 </div>
-              </td>
-            </tr>
-          ))}
-
-          {!filteredBookings.length ? (
-            <tr>
-              <td colSpan="7" className="empty-cell">
-                Aucune réservation pour ce filtre.
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
-    </div>
-  </div>
-) : (
-                 <div className="admin-sections">
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="admin-sections">
             <div className="card admin-panel">
               <h2>Accueil modifiable</h2>
 
@@ -697,4 +794,4 @@ export default function AdminDashboardPage() {
       </div>
     </section>
   );
-}
+} 

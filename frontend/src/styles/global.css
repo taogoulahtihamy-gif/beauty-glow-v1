@@ -1943,3 +1943,174 @@ td {
     white-space: nowrap;
   }
 }
+
+
+
+.desktop-bookings-table {
+  display: block;
+}
+
+.mobile-bookings-list {
+  display: none;
+}
+
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 22px;
+}
+
+.table-wrap table {
+  width: 100%;
+  min-width: 860px;
+  border-collapse: collapse;
+}
+
+.table-wrap th {
+  background: #fff7f3;
+  color: var(--text);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.table-wrap th,
+.table-wrap td {
+  padding: 14px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table-wrap tbody tr:hover {
+  background: rgba(255, 247, 243, 0.45);
+}
+
+.table-wrap td:last-child,
+.table-wrap th:last-child {
+  min-width: 190px;
+}
+
+.compact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+}
+
+.compact-actions .btn {
+  margin: 0;
+}
+
+.compact-actions .btn-small {
+  min-width: 88px;
+  padding: 9px 12px;
+}
+
+.mobile-booking-card {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+  border-radius: 22px;
+}
+
+.mobile-booking-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mobile-booking-row strong {
+  font-size: 0.92rem;
+  color: var(--text);
+}
+
+.mobile-booking-row span {
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.mobile-booking-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.mobile-empty-bookings {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: #fff;
+  padding: 18px;
+}
+
+@media (max-width: 768px) {
+  .desktop-bookings-table {
+    display: none;
+  }
+
+  .mobile-bookings-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .mobile-booking-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-header-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-header-row .btn {
+    width: 100%;
+  }
+
+  .admin-tab-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .filter-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .filter-pills .filter-chip {
+    flex: 1 1 calc(50% - 10px);
+    text-align: center;
+  }
+
+  .admin-upload-row .btn {
+    width: 100%;
+  }
+
+  .admin-save-row .btn {
+    width: 100%;
+  }
+
+  .admin-media-body strong {
+    word-break: break-word;
+  }
+
+  .admin-category-badge {
+    max-width: 100%;
+    word-break: break-word;
+  }
+}
+
+@media (max-width: 640px) {
+  .mobile-booking-card {
+    padding: 14px;
+  }
+
+  .filter-pills .filter-chip {
+    flex: 1 1 100%;
+  }
+
+  .admin-tab-row {
+    grid-template-columns: 1fr;
+  }
+}
