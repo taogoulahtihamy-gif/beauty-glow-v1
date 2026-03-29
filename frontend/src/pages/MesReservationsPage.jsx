@@ -1,109 +1,121 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
-export default function MonComptePage() {
-  const { user, refreshUser, updateProfile } = useAuth();
+function formatBookingDate(value) {
+  if (!value) return '-';
 
-  const [formValues, setFormValues] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
-  });
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
 
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
+  return date.toLocaleDateString('fr-FR');
+}
+
+function formatStatusLabel(status) {
+  switch (status) {
+    case 'en_attente':
+      return 'En attente';
+    case 'confirmee':
+      return 'Confirmée';
+    case 'annulee':
+      return 'Annulée';
+    default:
+      return status || '-';
+  }
+}
+
+export default function MesReservationsPage() {
+  const { user } = useAuth();
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    async function loadBookings() {
+      try {
+        setError('');
+        const data = await api.getMyBookings();
+        setReservations(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || 'Impossible de charger vos réservations.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
     if (user) {
-      setFormValues({
-        fullName: user.full_name || user.fullName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-      });
+      loadBookings();
     }
   }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      refreshUser().catch(console.error);
-    }
-  }, []);
 
   if (!user) {
     return <Navigate to="/connexion" replace />;
   }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setMessage('');
-    setError('');
-
-    try {
-      await updateProfile(formValues);
-      setMessage('Vos informations ont bien été mises à jour.');
-    } catch (err) {
-      console.error(err);
-      setError(err.message || 'Impossible de mettre à jour votre profil.');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <section className="section">
       <div className="container">
         <div className="page-heading">
           <span className="eyebrow">Mon espace</span>
-          <h1>Mon compte</h1>
-          <p>Modifie ici tes informations personnelles.</p>
+          <h1>Mes réservations</h1>
+          <p>Retrouve ici tes rendez-vous et leur statut.</p>
         </div>
 
-        <div className="card client-account-card">
-          <form onSubmit={handleSubmit} className="form-grid one-col">
-            <label className="field">
-              <span>Nom complet</span>
-              <input
-                value={formValues.fullName}
-                onChange={(e) =>
-                  setFormValues((prev) => ({ ...prev, fullName: e.target.value }))
-                }
-              />
-            </label>
+        {loading ? (
+          <div className="card empty-client-state">
+            <p>Chargement de vos réservations...</p>
+          </div>
+        ) : error ? (
+          <div className="card empty-client-state">
+            <h2>Impossible de charger les réservations</h2>
+            <p>{error}</p>
+          </div>
+        ) : reservations.length ? (
+          <div className="client-bookings-grid">
+            {reservations.map((booking) => (
+              <article key={booking.id} className="card client-booking-card">
+                <div className="client-booking-row">
+                  <strong>Prestation</strong>
+                  <span>{booking.service_name || '-'}</span>
+                </div>
 
-            <label className="field">
-              <span>Email</span>
-              <input
-                type="email"
-                value={formValues.email}
-                onChange={(e) =>
-                  setFormValues((prev) => ({ ...prev, email: e.target.value }))
-                }
-              />
-            </label>
+                <div className="client-booking-row">
+                  <strong>Date</strong>
+                  <span>{formatBookingDate(booking.booking_date)}</span>
+                </div>
 
-            <label className="field">
-              <span>Téléphone</span>
-              <input
-                value={formValues.phone}
-                onChange={(e) =>
-                  setFormValues((prev) => ({ ...prev, phone: e.target.value }))
-                }
-              />
-            </label>
+                <div className="client-booking-row">
+                  <strong>Heure</strong>
+                  <span>{booking.booking_time || '-'}</span>
+                </div>
 
-            {message ? <p className="info-text">{message}</p> : null}
-            {error ? <p className="error-text">{error}</p> : null}
+                <div className="client-booking-row">
+                  <strong>Statut</strong>
+                  <span className={`status-pill ${booking.status}`}>
+                    {formatStatusLabel(booking.status)}
+                  </span>
+                </div>
 
-            <div className="form-submit-space">
-              <button className="btn btn-primary" type="submit" disabled={saving}>
-                {saving ? 'Enregistrement...' : 'Enregistrer mes informations'}
-              </button>
-            </div>
-          </form>
-        </div>
+                {booking.notes ? (
+                  <div className="client-booking-row">
+                    <strong>Note</strong>
+                    <span>{booking.notes}</span>
+                  </div>
+                ) : null}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="card empty-client-state">
+            <h2>Aucune réservation pour le moment</h2>
+            <p>Tu n’as pas encore de réservation enregistrée sur ton compte.</p>
+            <Link to="/reservation" className="btn btn-primary">
+              Réserver maintenant
+            </Link>
+          </div>
+        )}
       </div>
     </section>
   );
