@@ -4,7 +4,10 @@ import { api } from '../services/api';
 
 export default function BookingPage() {
   const [site, setSite] = useState(null);
-  useEffect(() => { api.getSite().then(setSite).catch(console.error); }, []);
+
+  useEffect(() => {
+    api.getSite().then(setSite).catch(console.error);
+  }, []);
 
   return (
     <section className="section">
@@ -12,8 +15,12 @@ export default function BookingPage() {
         <div>
           <span className="eyebrow">Réservation</span>
           <h1>Réservez votre créneau</h1>
-          <p>Nous vous recontacterons.</p>
+          <p>
+            Remplissez votre demande en quelques instants. Nous vous recontacterons
+            rapidement pour confirmer votre rendez-vous.
+          </p>
         </div>
+
         <BookingForm services={site?.services || []} />
       </div>
     </section>
