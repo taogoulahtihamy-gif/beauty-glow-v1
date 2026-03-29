@@ -1,58 +1,236 @@
 import express from 'express';
-import bcrypt from 'bcryptjs';
 import { pool } from '../config/db.js';
-import { createToken } from '../utils/createToken.js';
+import { requireAdmin, requireAuth } from '../middleware/auth.js';
+import {
+  buildClientConfirmationText,
+  buildClientConfirmationWhatsAppUrl,
+  buildSalonWhatsAppUrl,
+  logNotification,
+  sendSalonBookingNotification,
+  sendClientConfirmationNotification,
+  sendClientCancellationNotification,
+} from '../utils/whatsapp.js';
 
 const router = express.Router();
 
-router.post('/register', async (req, res) => {
-  const { fullName, email, phone, password } = req.body;
-  if (!fullName || !email || !password) {
-    return res.status(400).json({ message: 'Nom, email et mot de passe requis.' });
+router.post('/', async (req, res) => {
+  try {
+    const {
+      customerName,
+      customerEmail,
+      customerPhone,
+      serviceName,
+      bookingDate,
+      bookingTime,
+      notes,
+    } = req.body;
+
+    if (!customerName || !customerPhone || !serviceName || !bookingDate || !bookingTime) {
+      return res.status(400).json({
+        message: 'Tous les champs requis ne sont pas remplis.',
+      });
+    }
+
+    let userId = null;
+
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.replace('Bearer ', '');
+        const jwt = await import('jsonwebtoken');
+        const decoded = jwt.default.verify(token, process.env.JWT_SECRET);
+        if (decoded?.role === 'client' && decoded?.id) {
+          userId = decoded.id;
+        }
+      } catch {
+        userId = null;
+      }
+    }
+
+    const result = await pool.query(
+      `INSERT INTO bookings (
+        user_id,
+        customer_name,
+        customer_email,
+        customer_phone,
+        service_name,
+        booking_date,
+        booking_time,
+        notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *`,
+      [
+        userId,
+        customerName,
+        customerEmail || '',
+        customerPhone,
+        serviceName,
+        bookingDate,
+        bookingTime,
+        notes || '',
+      ]
+    );
+
+    const booking = result.rows[0];
+    const whatsappSalonUrl = await buildSalonWhatsAppUrl(booking);
+
+    try {
+      await logNotification({
+        bookingId: booking.id,
+        type: 'reservation_created',
+        recipient: 'salon',
+        payload: JSON.stringify({ whatsappSalonUrl }),
+      });
+    } catch (error) {
+      console.error('Erreur log réservation créée :', error);
+    }
+
+    try {
+      await sendSalonBookingNotification(booking);
+
+      await pool.query(
+        'UPDATE bookings SET whatsapp_notified = TRUE, updated_at = NOW() WHERE id = $1',
+        [booking.id]
+      );
+    } catch (error) {
+      console.error('Erreur notification salon :', error);
+    }
+
+    res.status(201).json({ booking, whatsappSalonUrl });
+  } catch (error) {
+    console.error('Erreur création réservation :', error);
+    res.status(500).json({
+      message: "Impossible d'enregistrer la réservation.",
+      error: error.message,
+    });
   }
-
-  const existing = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
-  if (existing.rowCount > 0) {
-    return res.status(409).json({ message: 'Cet email existe déjà.' });
-  }
-
-  const hash = await bcrypt.hash(password, 10);
-  const result = await pool.query(
-    `INSERT INTO users (role, full_name, email, phone, password_hash)
-     VALUES ('client', $1, $2, $3, $4)
-     RETURNING id, role, full_name, email, phone`,
-    [fullName, email, phone || '', hash]
-  );
-
-  const user = result.rows[0];
-  const token = createToken(user);
-  res.status(201).json({ token, user });
 });
 
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-  if (result.rowCount === 0) {
-    return res.status(401).json({ message: 'Identifiants invalides.' });
+router.get('/', requireAdmin, async (_req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM bookings ORDER BY created_at DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération réservations :', error);
+    res.status(500).json({
+      message: 'Impossible de charger les réservations.',
+      error: error.message,
+    });
   }
+});
 
-  const user = result.rows[0];
-  const valid = await bcrypt.compare(password, user.password_hash);
-  if (!valid) {
-    return res.status(401).json({ message: 'Identifiants invalides.' });
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ message: 'Accès client requis.' });
+    }
+
+    const result = await pool.query(
+      `SELECT *
+       FROM bookings
+       WHERE user_id = $1
+       ORDER BY booking_date DESC, booking_time DESC, created_at DESC`,
+      [req.user.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération réservations client :', error);
+    res.status(500).json({
+      message: 'Impossible de charger vos réservations.',
+      error: error.message,
+    });
   }
+});
 
-  const token = createToken(user);
-  res.json({
-    token,
-    user: {
-      id: user.id,
-      role: user.role,
-      full_name: user.full_name,
-      email: user.email,
-      phone: user.phone,
-    },
-  });
+router.patch('/:id/status', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const allowedStatuses = ['en_attente', 'confirmee', 'annulee'];
+
+    if (!allowedStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Statut invalide.' });
+    }
+
+    const result = await pool.query(
+      `UPDATE bookings
+       SET status = $1::varchar,
+           updated_at = NOW(),
+           client_notified = CASE
+             WHEN $1::varchar = 'confirmee' THEN TRUE
+             ELSE client_notified
+           END
+       WHERE id = $2
+       RETURNING *`,
+      [status, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Réservation introuvable.' });
+    }
+
+    const booking = result.rows[0];
+    let clientMessage = null;
+    let clientWhatsAppUrl = null;
+    let notificationWarning = null;
+
+    if (status === 'confirmee') {
+      clientMessage = buildClientConfirmationText(booking);
+      clientWhatsAppUrl = buildClientConfirmationWhatsAppUrl(booking);
+
+      try {
+        await logNotification({
+          bookingId: booking.id,
+          type: 'booking_confirmed',
+          recipient: booking.customer_phone,
+          payload: clientMessage,
+        });
+      } catch (error) {
+        console.error('Erreur log confirmation réservation :', error);
+      }
+
+      try {
+        await sendClientConfirmationNotification(booking);
+      } catch (error) {
+        console.error('Erreur notification client confirmation :', error);
+        notificationWarning =
+          "Le statut a été mis à jour, mais la notification client n'a pas pu être envoyée.";
+      }
+    }
+
+    if (status === 'annulee') {
+      try {
+        await logNotification({
+          bookingId: booking.id,
+          type: 'booking_cancelled',
+          recipient: booking.customer_phone,
+          payload: 'Réservation annulée',
+        });
+      } catch (error) {
+        console.error('Erreur log annulation réservation :', error);
+      }
+
+      try {
+        await sendClientCancellationNotification(booking);
+      } catch (error) {
+        console.error('Erreur notification client annulation :', error);
+      }
+    }
+
+    res.json({
+      booking,
+      clientMessage,
+      clientWhatsAppUrl,
+      notificationWarning,
+    });
+  } catch (error) {
+    console.error('Erreur PATCH statut réservation :', error);
+    res.status(500).json({
+      message: 'Impossible de mettre à jour le statut de la réservation.',
+      error: error.message,
+    });
+  }
 });
 
 export default router;

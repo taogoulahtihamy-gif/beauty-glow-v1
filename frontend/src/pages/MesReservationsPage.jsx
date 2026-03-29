@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
-import { Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Navigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 
 function formatBookingDate(value) {
   if (!value) return '-';
@@ -26,14 +27,32 @@ function formatStatusLabel(status) {
 
 export default function MesReservationsPage() {
   const { user } = useAuth();
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    async function loadBookings() {
+      try {
+        setError('');
+        const data = await api.getMyBookings();
+        setReservations(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error(err);
+        setError(err.message || 'Impossible de charger vos réservations.');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (user) {
+      loadBookings();
+    }
+  }, [user]);
 
   if (!user) {
     return <Navigate to="/connexion" replace />;
   }
-
-  const reservations = useMemo(() => {
-    return Array.isArray(user?.bookings) ? user.bookings : [];
-  }, [user]);
 
   return (
     <section className="section">
@@ -41,12 +60,19 @@ export default function MesReservationsPage() {
         <div className="page-heading">
           <span className="eyebrow">Mon espace</span>
           <h1>Mes réservations</h1>
-          <p>
-            Retrouve ici tes demandes de rendez-vous et leur statut.
-          </p>
+          <p>Retrouve ici tes rendez-vous et leur statut.</p>
         </div>
 
-        {reservations.length ? (
+        {loading ? (
+          <div className="card empty-client-state">
+            <p>Chargement de vos réservations...</p>
+          </div>
+        ) : error ? (
+          <div className="card empty-client-state">
+            <h2>Impossible de charger les réservations</h2>
+            <p>{error}</p>
+          </div>
+        ) : reservations.length ? (
           <div className="client-bookings-grid">
             {reservations.map((booking) => (
               <article key={booking.id} className="card client-booking-card">
@@ -71,15 +97,23 @@ export default function MesReservationsPage() {
                     {formatStatusLabel(booking.status)}
                   </span>
                 </div>
+
+                {booking.notes ? (
+                  <div className="client-booking-row">
+                    <strong>Note</strong>
+                    <span>{booking.notes}</span>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
         ) : (
           <div className="card empty-client-state">
             <h2>Aucune réservation pour le moment</h2>
-            <p>
-              Tu n’as pas encore de réservation enregistrée sur ton compte.
-            </p>
+            <p>Tu n’as pas encore de réservation enregistrée sur ton compte.</p>
+            <Link to="/reservation" className="btn btn-primary">
+              Réserver maintenant
+            </Link>
           </div>
         )}
       </div>

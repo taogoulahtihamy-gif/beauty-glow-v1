@@ -53,6 +53,8 @@ export const api = {
 
   getBookings: () => request('/bookings'),
 
+  getMyBookings: () => request('/bookings/me'),
+
   updateBookingStatus: (id, status) =>
     request(`/bookings/${id}/status`, {
       method: 'PATCH',
