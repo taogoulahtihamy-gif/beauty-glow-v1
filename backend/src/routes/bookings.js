@@ -178,5 +178,27 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
     });
   }
 });
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ message: 'Accès client requis.' });
+    }
+
+    const result = await pool.query(
+      `SELECT *
+       FROM bookings
+       WHERE user_id = $1
+       ORDER BY booking_date DESC, booking_time DESC`,
+      [req.user.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération réservations client :', error);
+    res.status(500).json({
+      message: 'Impossible de charger vos réservations.',
+    });
+  }
+});
 
 export default router;
