@@ -12,11 +12,19 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AdminLoginPage from './pages/AdminLoginPage';
 import AdminDashboardPage from './pages/AdminDashboardPage';
+import MesReservationsPage from './pages/MesReservationsPage';
+import MonComptePage from './pages/MonComptePage';
 import { useAuth } from './context/AuthContext';
 
 function AdminRoute({ children }) {
   const { user } = useAuth();
   if (!user || user.role !== 'admin') return <Navigate to="/admin/login" replace />;
+  return children;
+}
+
+function ClientRoute({ children }) {
+  const { user } = useAuth();
+  if (!user || user.role === 'admin') return <Navigate to="/connexion" replace />;
   return children;
 }
 
@@ -34,8 +42,34 @@ export default function App() {
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/connexion" element={<LoginPage />} />
         <Route path="/inscription" element={<RegisterPage />} />
+
+        <Route
+          path="/mes-reservations"
+          element={
+            <ClientRoute>
+              <MesReservationsPage />
+            </ClientRoute>
+          }
+        />
+
+        <Route
+          path="/mon-compte"
+          element={
+            <ClientRoute>
+              <MonComptePage />
+            </ClientRoute>
+          }
+        />
+
         <Route path="/admin/login" element={<AdminLoginPage />} />
-        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+        <Route
+          path="/admin"
+          element={
+            <AdminRoute>
+              <AdminDashboardPage />
+            </AdminRoute>
+          }
+        />
       </Routes>
       <Footer />
     </div>
