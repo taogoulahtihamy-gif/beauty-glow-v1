@@ -54,7 +54,7 @@ export async function getSalonWhatsappNumber() {
   return (
     settings.rows[0]?.contact_whatsapp ||
     process.env.WHATSAPP_SALON ||
-    '221770000000'
+    '+221778492779'
   );
 }
 
