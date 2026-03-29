@@ -29,8 +29,9 @@ export default function BookingForm({ services, compact = false }) {
     try {
       const data = await api.createBooking(values);
       window.open(data.whatsappSalonUrl, '_blank');
-      setMessage('Réservation enregistrée. WhatsApp s’ouvre pour prévenir le salon.');
+      setMessage('Votre demande a bien été prise en compte. Nous vous contacterons rapidement pour confirmer votre rendez-vous                            ');
       setValues({
+
         customerName: '',
         customerEmail: '',
         customerPhone: '',
