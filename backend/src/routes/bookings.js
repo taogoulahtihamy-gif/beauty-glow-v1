@@ -1,6 +1,7 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import { pool } from '../config/db.js';
-import { requireAdmin } from '../middleware/auth.js';
+import { requireAdmin, requireAuth } from '../middleware/auth.js';
 import {
   buildClientConfirmationText,
   buildClientConfirmationWhatsAppUrl,
@@ -8,10 +9,14 @@ import {
   logNotification,
   sendSalonBookingNotification,
   sendClientConfirmationNotification,
+  sendClientCancellationNotification,
 } from '../utils/whatsapp.js';
 
 const router = express.Router();
 
+/**
+ * Créer une réservation
+ */
 router.post('/', async (req, res) => {
   try {
     const {
@@ -30,12 +35,35 @@ router.post('/', async (req, res) => {
       });
     }
 
+    let userId = null;
+
+    if (req.headers.authorization?.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.replace('Bearer ', '');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+        if (decoded?.role === 'client' && decoded?.id) {
+          userId = decoded.id;
+        }
+      } catch {
+        userId = null;
+      }
+    }
+
     const result = await pool.query(
       `INSERT INTO bookings (
-        customer_name, customer_email, customer_phone, service_name, booking_date, booking_time, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        user_id,
+        customer_name,
+        customer_email,
+        customer_phone,
+        service_name,
+        booking_date,
+        booking_time,
+        notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
       RETURNING *`,
       [
+        userId,
         customerName,
         customerEmail || '',
         customerPhone,
@@ -81,6 +109,9 @@ router.post('/', async (req, res) => {
   }
 });
 
+/**
+ * Admin : voir toutes les réservations
+ */
 router.get('/', requireAdmin, async (_req, res) => {
   try {
     const result = await pool.query('SELECT * FROM bookings ORDER BY created_at DESC');
@@ -94,6 +125,36 @@ router.get('/', requireAdmin, async (_req, res) => {
   }
 });
 
+/**
+ * Client : voir MES réservations
+ */
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    if (req.user.role !== 'client') {
+      return res.status(403).json({ message: 'Accès client requis.' });
+    }
+
+    const result = await pool.query(
+      `SELECT *
+       FROM bookings
+       WHERE user_id = $1
+       ORDER BY booking_date DESC, booking_time DESC, created_at DESC`,
+      [req.user.id]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Erreur récupération réservations client :', error);
+    res.status(500).json({
+      message: 'Impossible de charger vos réservations.',
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * Admin : changer le statut
+ */
 router.patch('/:id/status', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
@@ -162,6 +223,12 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
       } catch (error) {
         console.error('Erreur log annulation réservation :', error);
       }
+
+      try {
+        await sendClientCancellationNotification(booking);
+      } catch (error) {
+        console.error('Erreur notification client annulation :', error);
+      }
     }
 
     res.json({
@@ -175,28 +242,6 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
     res.status(500).json({
       message: 'Impossible de mettre à jour le statut de la réservation.',
       error: error.message,
-    });
-  }
-});
-router.get('/me', requireAuth, async (req, res) => {
-  try {
-    if (req.user.role !== 'client') {
-      return res.status(403).json({ message: 'Accès client requis.' });
-    }
-
-    const result = await pool.query(
-      `SELECT *
-       FROM bookings
-       WHERE user_id = $1
-       ORDER BY booking_date DESC, booking_time DESC`,
-      [req.user.id]
-    );
-
-    res.json(result.rows);
-  } catch (error) {
-    console.error('Erreur récupération réservations client :', error);
-    res.status(500).json({
-      message: 'Impossible de charger vos réservations.',
     });
   }
 });
