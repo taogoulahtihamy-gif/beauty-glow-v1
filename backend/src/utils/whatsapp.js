@@ -1,12 +1,4 @@
-import twilio from 'twilio';
 import { pool } from '../config/db.js';
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const twilioFrom = process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886';
-
-const client =
-  accountSid && authToken ? twilio(accountSid, authToken) : null;
 
 function normalizePhone(phone) {
   if (!phone) return null;
@@ -14,28 +6,21 @@ function normalizePhone(phone) {
   let cleaned = String(phone)
     .trim()
     .replace(/\s+/g, '')
-    .replace(/[^\d+]/g, '');
+    .replace(/[^\d]/g, '');
 
   if (cleaned.startsWith('00')) {
-    cleaned = `+${cleaned.slice(2)}`;
+    cleaned = cleaned.slice(2);
   }
 
-  if (!cleaned.startsWith('+')) {
-    if (cleaned.startsWith('221')) {
-      cleaned = `+${cleaned}`;
-    } else if (cleaned.startsWith('0')) {
-      cleaned = `+221${cleaned.slice(1)}`;
-    } else {
-      cleaned = `+221${cleaned}`;
-    }
+  if (cleaned.startsWith('221')) {
+    return cleaned;
   }
 
-  return cleaned;
-}
+  if (cleaned.startsWith('0')) {
+    return `221${cleaned.slice(1)}`;
+  }
 
-function formatWhatsAppAddress(phone) {
-  const normalized = normalizePhone(phone);
-  return normalized ? `whatsapp:${normalized}` : null;
+  return `221${cleaned}`;
 }
 
 export async function logNotification({ bookingId, type, recipient, payload }) {
@@ -52,9 +37,9 @@ export async function getSalonWhatsappNumber() {
   );
 
   return (
-    settings.rows[0]?.contact_whatsapp ||
-    process.env.WHATSAPP_SALON ||
-    '+221778492779'
+    normalizePhone(settings.rows[0]?.contact_whatsapp) ||
+    normalizePhone(process.env.WHATSAPP_SALON) ||
+    '221778492779'
   );
 }
 
@@ -71,11 +56,8 @@ export async function buildSalonWhatsAppUrl(booking) {
   ];
 
   const phone = await getSalonWhatsappNumber();
-  const sanitizedPhone = String(phone).replace(/\D/g, '');
 
-  return `https://wa.me/${sanitizedPhone}?text=${encodeURIComponent(
-    lines.join('\n')
-  )}`;
+  return `https://wa.me/${phone}?text=${encodeURIComponent(lines.join('\n'))}`;
 }
 
 export function buildClientConfirmationText(booking) {
@@ -91,7 +73,7 @@ export function buildClientConfirmationText(booking) {
 
 export function buildClientConfirmationWhatsAppUrl(booking) {
   const message = buildClientConfirmationText(booking);
-  const phone = String(booking.customer_phone || '').replace(/\D/g, '');
+  const phone = normalizePhone(booking.customer_phone || '');
 
   return phone
     ? `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
@@ -99,28 +81,47 @@ export function buildClientConfirmationWhatsAppUrl(booking) {
 }
 
 export async function sendWhatsAppMessage({ to, body }) {
-  if (!client) {
-    console.warn('Twilio non configuré.');
+  const instanceId = process.env.ULTRAMSG_INSTANCE_ID;
+  const token = process.env.ULTRAMSG_TOKEN;
+
+  if (!instanceId || !token) {
+    console.warn('UltraMsg non configuré.');
     return null;
   }
 
-  const formattedTo = formatWhatsAppAddress(to);
+  const normalizedTo = normalizePhone(to);
 
-  if (!formattedTo) {
+  if (!normalizedTo) {
     console.warn('Numéro WhatsApp invalide :', to);
     return null;
   }
 
   try {
-    const message = await client.messages.create({
-      from: twilioFrom,
-      to: formattedTo,
-      body,
-    });
+    console.log('Envoi UltraMsg vers :', normalizedTo);
+    console.log('Instance UltraMsg :', instanceId);
 
-    return message;
+    const response = await fetch(
+      `https://api.ultramsg.com/${instanceId}/messages/chat`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          token,
+          to: normalizedTo,
+          body,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    console.log('UltraMsg response:', data);
+
+    return data;
   } catch (error) {
-    console.error('Erreur Twilio WhatsApp :', error.message);
+    console.error('Erreur UltraMsg :', error.message);
     return null;
   }
 }
@@ -151,7 +152,7 @@ export async function sendSalonBookingNotification(booking) {
     payload: JSON.stringify({
       body,
       sent: !!result,
-      sid: result?.sid || null,
+      result,
     }),
   });
 
@@ -173,7 +174,7 @@ export async function sendClientConfirmationNotification(booking) {
     payload: JSON.stringify({
       body,
       sent: !!result,
-      sid: result?.sid || null,
+      result,
     }),
   });
 

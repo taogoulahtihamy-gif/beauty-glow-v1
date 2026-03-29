@@ -53,7 +53,6 @@ router.post('/', async (req, res) => {
     payload: JSON.stringify({ whatsappSalonUrl }),
   });
 
-  // Envoi WhatsApp réel au salon via Twilio
   await sendSalonBookingNotification(booking);
 
   await pool.query(
@@ -105,7 +104,6 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
       payload: clientMessage,
     });
 
-    // Envoi WhatsApp réel à la cliente via Twilio
     await sendClientConfirmationNotification(booking);
   }
 
