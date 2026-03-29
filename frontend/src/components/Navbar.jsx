@@ -16,6 +16,8 @@ export default function Navbar() {
     };
   }, [open]);
 
+  const isClient = user && user.role !== 'admin';
+
   return (
     <header className="navbar-wrap">
       <div className="container navbar">
@@ -31,6 +33,7 @@ export default function Navbar() {
           onClick={() => setOpen((v) => !v)}
           aria-label={open ? 'Fermer le menu' : 'Ouvrir le menu'}
           aria-expanded={open}
+          type="button"
         >
           <span />
           <span />
@@ -38,23 +41,93 @@ export default function Navbar() {
         </button>
 
         <nav className={`nav-links ${open ? 'open' : ''}`}>
-          <NavLink to="/" onClick={closeMenu}>Accueil</NavLink>
-          <NavLink to="/prestations" onClick={closeMenu}>Prestations</NavLink>
-          <NavLink to="/tarifs" onClick={closeMenu}>Tarifs</NavLink>
-          <NavLink to="/galerie" onClick={closeMenu}>Galerie</NavLink>
-          <NavLink to="/reservation" onClick={closeMenu}>Réservation</NavLink>
-          <NavLink to="/a-propos" onClick={closeMenu}>À propos</NavLink>
-          <NavLink to="/contact" onClick={closeMenu}>Contact</NavLink>
-          {!user && <NavLink to="/connexion" onClick={closeMenu}>Connexion</NavLink>}
-          {!user && <NavLink to="/inscription" onClick={closeMenu}>Créer un compte</NavLink>}
-          {user?.role === 'admin' && <NavLink to="/admin" onClick={closeMenu}>Admin</NavLink>}
-          {user && <button className="ghost-link" onClick={() => { logout(); closeMenu(); }}>Déconnexion</button>}
-          <NavLink to="/reservation" className="mobile-book-btn btn btn-primary" onClick={closeMenu}>Réserver</NavLink>
+          <NavLink to="/" onClick={closeMenu}>
+            Accueil
+          </NavLink>
+
+          <NavLink to="/prestations" onClick={closeMenu}>
+            Prestations
+          </NavLink>
+
+          <NavLink to="/tarifs" onClick={closeMenu}>
+            Tarifs
+          </NavLink>
+
+          <NavLink to="/galerie" onClick={closeMenu}>
+            Galerie
+          </NavLink>
+
+          <NavLink to="/reservation" onClick={closeMenu}>
+            Réservation
+          </NavLink>
+
+          <NavLink to="/a-propos" onClick={closeMenu}>
+            À propos
+          </NavLink>
+
+          <NavLink to="/contact" onClick={closeMenu}>
+            Contact
+          </NavLink>
+
+          {!user && (
+            <NavLink to="/connexion" onClick={closeMenu}>
+              Connexion
+            </NavLink>
+          )}
+
+          {!user && (
+            <NavLink to="/inscription" onClick={closeMenu}>
+              Créer un compte
+            </NavLink>
+          )}
+
+          {isClient && (
+            <NavLink to="/mes-reservations" onClick={closeMenu}>
+              Mes réservations
+            </NavLink>
+          )}
+
+          {isClient && (
+            <NavLink to="/mon-compte" onClick={closeMenu}>
+              Mon compte
+            </NavLink>
+          )}
+
+          {user && (
+            <button
+              className="ghost-link"
+              type="button"
+              onClick={() => {
+                logout();
+                closeMenu();
+              }}
+            >
+              Déconnexion
+            </button>
+          )}
+
+          <NavLink
+            to="/reservation"
+            className="mobile-book-btn btn btn-primary"
+            onClick={closeMenu}
+          >
+            Réserver
+          </NavLink>
         </nav>
 
-        <Link to="/reservation" className="btn btn-primary navbar-cta">Réserver</Link>
+        <Link to="/reservation" className="btn btn-primary navbar-cta">
+          Réserver
+        </Link>
       </div>
-      {open ? <button className="nav-backdrop" onClick={closeMenu} aria-label="Fermer le menu" /> : null}
+
+      {open ? (
+        <button
+          className="nav-backdrop"
+          onClick={closeMenu}
+          aria-label="Fermer le menu"
+          type="button"
+        />
+      ) : null}
     </header>
   );
 }
