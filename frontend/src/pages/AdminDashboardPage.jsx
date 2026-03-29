@@ -24,6 +24,28 @@ const CATEGORY_OPTIONS = [
   'Soins',
 ];
 
+function formatBookingDate(value) {
+  if (!value) return '-';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString('fr-FR');
+}
+
+function formatStatusLabel(status) {
+  switch (status) {
+    case 'en_attente':
+      return 'En attente';
+    case 'confirmee':
+      return 'Confirmée';
+    case 'annulee':
+      return 'Annulée';
+    default:
+      return status || '-';
+  }
+}
+
 export default function AdminDashboardPage() {
   const { logout } = useAuth();
 
@@ -77,7 +99,10 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    load().catch(console.error);
+    load().catch((error) => {
+      console.error(error);
+      setUploadError(error.message || 'Impossible de charger le dashboard.');
+    });
   }, []);
 
   const filteredBookings = useMemo(() => {
@@ -90,40 +115,38 @@ export default function AdminDashboardPage() {
     return items.filter((item) => (item.image_url || '').includes('/uploads/'));
   }, [content]);
 
-async function updateStatus(id, status) {
-  try {
-    setError('');
+  const updateStatus = async (id, status) => {
+    setMessage('');
+    setUploadError('');
+    setUpdatingBookingId(id);
 
-    const token = localStorage.getItem('adminToken');
+    try {
+      const data = await api.updateBookingStatus(id, status);
 
-    const response = await fetch(`${API_BASE}/bookings/${id}/status`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status }),
-    });
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === id ? { ...booking, ...data.booking } : booking
+        )
+      );
 
-    const data = await response.json();
+      setMessage(
+        status === 'confirmee'
+          ? 'Réservation confirmée et notification envoyée.'
+          : status === 'annulee'
+            ? 'Réservation annulée.'
+            : 'Statut mis à jour.'
+      );
 
-    if (!response.ok) {
-      throw new Error(data.message || 'Impossible de mettre à jour le statut.');
+      await load();
+    } catch (error) {
+      console.error('Erreur updateStatus:', error);
+      setUploadError(
+        error.message || 'Impossible de mettre à jour le statut de la réservation.'
+      );
+    } finally {
+      setUpdatingBookingId(null);
     }
-
-    setBookings((prev) =>
-      prev.map((booking) =>
-        booking.id === id ? { ...booking, ...data.booking } : booking
-      )
-    );
-
-    setToast(`Statut mis à jour : ${status}`);
-    setTimeout(() => setToast(''), 2500);
-  } catch (err) {
-    console.error('Erreur updateStatus:', err);
-    setError(err.message || 'Impossible de mettre à jour le statut de la réservation.');
-  }
-}
+  };
 
   const handleUploadAndAdd = async () => {
     setUploadError('');
@@ -355,11 +378,11 @@ async function updateStatus(id, status) {
                       <td>{booking.customer_name}</td>
                       <td>{booking.customer_phone}</td>
                       <td>{booking.service_name}</td>
-                      <td>{booking.booking_date}</td>
+                      <td>{formatBookingDate(booking.booking_date)}</td>
                       <td>{booking.booking_time}</td>
                       <td>
                         <span className={`status-pill ${booking.status}`}>
-                          {booking.status}
+                          {formatStatusLabel(booking.status)}
                         </span>
                       </td>
                       <td>
@@ -418,7 +441,7 @@ async function updateStatus(id, status) {
 
                     <div className="mobile-booking-row">
                       <strong>Date</strong>
-                      <span>{booking.booking_date}</span>
+                      <span>{formatBookingDate(booking.booking_date)}</span>
                     </div>
 
                     <div className="mobile-booking-row">
@@ -428,7 +451,9 @@ async function updateStatus(id, status) {
 
                     <div className="mobile-booking-row">
                       <strong>Statut</strong>
-                      <span className={`status-pill ${booking.status}`}>{booking.status}</span>
+                      <span className={`status-pill ${booking.status}`}>
+                        {formatStatusLabel(booking.status)}
+                      </span>
                     </div>
 
                     <div className="mobile-booking-actions">
