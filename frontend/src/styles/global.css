@@ -2517,3 +2517,10 @@ td {
 .client-account-card .form-submit-space {
   margin-top: 8px;
 }
+.client-account-card {
+  max-width: 720px;
+}
+
+.client-account-card .form-submit-space {
+  margin-top: 8px;
+}
