@@ -6,6 +6,8 @@ import {
   buildClientConfirmationWhatsAppUrl,
   buildSalonWhatsAppUrl,
   logNotification,
+  sendSalonBookingNotification,
+  sendClientConfirmationNotification,
 } from '../utils/whatsapp.js';
 
 const router = express.Router();
@@ -30,7 +32,15 @@ router.post('/', async (req, res) => {
       customer_name, customer_email, customer_phone, service_name, booking_date, booking_time, notes
     ) VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING *`,
-    [customerName, customerEmail || '', customerPhone, serviceName, bookingDate, bookingTime, notes || '']
+    [
+      customerName,
+      customerEmail || '',
+      customerPhone,
+      serviceName,
+      bookingDate,
+      bookingTime,
+      notes || '',
+    ]
   );
 
   const booking = result.rows[0];
@@ -43,7 +53,13 @@ router.post('/', async (req, res) => {
     payload: JSON.stringify({ whatsappSalonUrl }),
   });
 
-  await pool.query('UPDATE bookings SET whatsapp_notified = TRUE, updated_at = NOW() WHERE id = $1', [booking.id]);
+  // Envoi WhatsApp réel au salon via Twilio
+  await sendSalonBookingNotification(booking);
+
+  await pool.query(
+    'UPDATE bookings SET whatsapp_notified = TRUE, updated_at = NOW() WHERE id = $1',
+    [booking.id]
+  );
 
   res.status(201).json({ booking, whatsappSalonUrl });
 });
@@ -59,7 +75,12 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
 
   const result = await pool.query(
     `UPDATE bookings
-     SET status = $1, updated_at = NOW(), client_notified = CASE WHEN $1 = 'confirmee' THEN TRUE ELSE client_notified END
+     SET status = $1,
+         updated_at = NOW(),
+         client_notified = CASE
+           WHEN $1 = 'confirmee' THEN TRUE
+           ELSE client_notified
+         END
      WHERE id = $2
      RETURNING *`,
     [status, id]
@@ -76,12 +97,16 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
   if (status === 'confirmee') {
     clientMessage = buildClientConfirmationText(booking);
     clientWhatsAppUrl = buildClientConfirmationWhatsAppUrl(booking);
+
     await logNotification({
       bookingId: booking.id,
       type: 'booking_confirmed',
       recipient: booking.customer_phone,
       payload: clientMessage,
     });
+
+    // Envoi WhatsApp réel à la cliente via Twilio
+    await sendClientConfirmationNotification(booking);
   }
 
   res.json({ booking, clientMessage, clientWhatsAppUrl });
