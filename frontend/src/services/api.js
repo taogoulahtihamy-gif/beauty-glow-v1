@@ -41,6 +41,14 @@ export const api = {
       body: JSON.stringify(payload),
     }),
 
+  getMe: () => request('/auth/me'),
+
+  updateMe: (payload) =>
+    request('/auth/me', {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+
   getSite: () => request('/public/site'),
 
   createBooking: (payload) =>

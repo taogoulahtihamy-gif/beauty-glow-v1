@@ -9,17 +9,33 @@ export function AuthProvider({ children }) {
     return raw ? JSON.parse(raw) : null;
   });
 
+  const persistAuth = (token, userData) => {
+    localStorage.setItem('beauty_glow_token', token);
+    localStorage.setItem('beauty_glow_user', JSON.stringify(userData));
+    setUser(userData);
+  };
+
   const login = async (payload) => {
     const data = await api.login(payload);
-    localStorage.setItem('beauty_glow_token', data.token);
-    localStorage.setItem('beauty_glow_user', JSON.stringify(data.user));
-    setUser(data.user);
+    persistAuth(data.token, data.user);
     return data.user;
   };
 
   const register = async (payload) => {
     const data = await api.register(payload);
-    localStorage.setItem('beauty_glow_token', data.token);
+    persistAuth(data.token, data.user);
+    return data.user;
+  };
+
+  const refreshUser = async () => {
+    const data = await api.getMe();
+    localStorage.setItem('beauty_glow_user', JSON.stringify(data.user));
+    setUser(data.user);
+    return data.user;
+  };
+
+  const updateProfile = async (payload) => {
+    const data = await api.updateMe(payload);
     localStorage.setItem('beauty_glow_user', JSON.stringify(data.user));
     setUser(data.user);
     return data.user;
@@ -31,7 +47,18 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const value = useMemo(() => ({ user, login, register, logout }), [user]);
+  const value = useMemo(
+    () => ({
+      user,
+      login,
+      register,
+      refreshUser,
+      updateProfile,
+      logout,
+    }),
+    [user]
+  );
+
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
