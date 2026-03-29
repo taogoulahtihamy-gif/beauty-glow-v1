@@ -17,9 +17,21 @@ export default function Footer() {
         <div className="footer-col">
           <h4>Navigation</h4>
           <div className="footer-links-list">
-            <Link to="/prestations" className="footer-link">Prestations</Link>
-            <Link to="/galerie" className="footer-link">Galerie</Link>
-            <Link to="/reservation" className="footer-link">Réservation</Link>
+            <Link to="/prestations" className="footer-link">
+              Prestations
+            </Link>
+            <Link to="/galerie" className="footer-link">
+              Galerie
+            </Link>
+            <Link to="/tarifs" className="footer-link">
+              Tarifs
+            </Link>
+            <Link to="/reservation" className="footer-link">
+              Réservation
+            </Link>
+            <Link to="/contact" className="footer-link">
+              Contact
+            </Link>
           </div>
         </div>
 
@@ -75,6 +87,18 @@ export default function Footer() {
               <FaTiktok size={16} />
               <span>TikTok</span>
             </a>
+          </div>
+
+          <div className="footer-pro-area">
+            <Link to="/connexion" className="footer-pro-link">
+              Connexion client
+            </Link>
+            <Link to="/inscription" className="footer-pro-link">
+              Créer un compte
+            </Link>
+            <Link to="/admin/login" className="footer-pro-link footer-pro-link-discreet">
+              Espace pro
+            </Link>
           </div>
         </div>
       </div>

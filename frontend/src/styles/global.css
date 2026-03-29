@@ -2406,3 +2406,39 @@ td {
     font-size: 0.78rem;
   }
 }
+.footer-pro-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.footer-pro-link {
+  display: inline-block;
+  width: fit-content;
+  font-size: 0.92rem;
+  color: #6e6464;
+  text-decoration: none;
+  transition: 0.2s ease;
+}
+
+.footer-pro-link:hover {
+  color: var(--primary-dark);
+}
+
+.footer-pro-link-discreet {
+  opacity: 0.82;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 640px) {
+  .footer-pro-area {
+    margin-top: 12px;
+    gap: 6px;
+  }
+
+  .footer-pro-link,
+  .footer-pro-link-discreet {
+    font-size: 0.9rem;
+  }
+}
