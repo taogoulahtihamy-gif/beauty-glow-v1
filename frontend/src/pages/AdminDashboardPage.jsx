@@ -90,29 +90,41 @@ export default function AdminDashboardPage() {
     return items.filter((item) => (item.image_url || '').includes('/uploads/'));
   }, [content]);
 
- const updateStatus = async (id, status) => {
-  setMessage('');
-  setUploadError?.('');
-
+async function updateStatus(id, status) {
   try {
-    const data = await api.updateBookingStatus(id, status);
+    setError('');
 
-    if (data.clientMessage) {
-      setMessage(
-        status === 'confirmee'
-          ? 'Réservation confirmée et notification envoyée.'
-          : 'Statut mis à jour.'
-      );
-    } else {
-      setMessage('Statut mis à jour avec succès.');
+    const token = localStorage.getItem('adminToken');
+
+    const response = await fetch(`${API_BASE}/bookings/${id}/status`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Impossible de mettre à jour le statut.');
     }
 
-    await load();
-  } catch (error) {
-    console.error(error);
-    setMessage(error.message || 'Erreur lors de la mise à jour du statut.');
+    setBookings((prev) =>
+      prev.map((booking) =>
+        booking.id === id ? { ...booking, ...data.booking } : booking
+      )
+    );
+
+    setToast(`Statut mis à jour : ${status}`);
+    setTimeout(() => setToast(''), 2500);
+  } catch (err) {
+    console.error('Erreur updateStatus:', err);
+    setError(err.message || 'Impossible de mettre à jour le statut de la réservation.');
   }
-};
+}
+
   const handleUploadAndAdd = async () => {
     setUploadError('');
     setMessage('');
