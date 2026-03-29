@@ -107,10 +107,10 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
 
     const result = await pool.query(
       `UPDATE bookings
-       SET status = $1,
+       SET status = $1::varchar,
            updated_at = NOW(),
            client_notified = CASE
-             WHEN $1 = 'confirmee' THEN TRUE
+             WHEN $1::varchar = 'confirmee' THEN TRUE
              ELSE client_notified
            END
        WHERE id = $2
@@ -146,7 +146,8 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
         await sendClientConfirmationNotification(booking);
       } catch (error) {
         console.error('Erreur notification client confirmation :', error);
-        notificationWarning = "Le statut a été mis à jour, mais la notification client n'a pas pu être envoyée.";
+        notificationWarning =
+          "Le statut a été mis à jour, mais la notification client n'a pas pu être envoyée.";
       }
     }
 
