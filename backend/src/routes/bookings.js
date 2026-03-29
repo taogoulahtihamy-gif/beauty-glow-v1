@@ -49,19 +49,27 @@ router.post('/', async (req, res) => {
     const booking = result.rows[0];
     const whatsappSalonUrl = await buildSalonWhatsAppUrl(booking);
 
-    await logNotification({
-      bookingId: booking.id,
-      type: 'reservation_created',
-      recipient: 'salon',
-      payload: JSON.stringify({ whatsappSalonUrl }),
-    });
+    try {
+      await logNotification({
+        bookingId: booking.id,
+        type: 'reservation_created',
+        recipient: 'salon',
+        payload: JSON.stringify({ whatsappSalonUrl }),
+      });
+    } catch (error) {
+      console.error('Erreur log réservation créée :', error);
+    }
 
-    await sendSalonBookingNotification(booking);
+    try {
+      await sendSalonBookingNotification(booking);
 
-    await pool.query(
-      'UPDATE bookings SET whatsapp_notified = TRUE, updated_at = NOW() WHERE id = $1',
-      [booking.id]
-    );
+      await pool.query(
+        'UPDATE bookings SET whatsapp_notified = TRUE, updated_at = NOW() WHERE id = $1',
+        [booking.id]
+      );
+    } catch (error) {
+      console.error('Erreur notification salon :', error);
+    }
 
     res.status(201).json({ booking, whatsappSalonUrl });
   } catch (error) {
@@ -117,31 +125,50 @@ router.patch('/:id/status', requireAdmin, async (req, res) => {
     const booking = result.rows[0];
     let clientMessage = null;
     let clientWhatsAppUrl = null;
+    let notificationWarning = null;
 
     if (status === 'confirmee') {
       clientMessage = buildClientConfirmationText(booking);
       clientWhatsAppUrl = buildClientConfirmationWhatsAppUrl(booking);
 
-      await logNotification({
-        bookingId: booking.id,
-        type: 'booking_confirmed',
-        recipient: booking.customer_phone,
-        payload: clientMessage,
-      });
+      try {
+        await logNotification({
+          bookingId: booking.id,
+          type: 'booking_confirmed',
+          recipient: booking.customer_phone,
+          payload: clientMessage,
+        });
+      } catch (error) {
+        console.error('Erreur log confirmation réservation :', error);
+      }
 
-      await sendClientConfirmationNotification(booking);
+      try {
+        await sendClientConfirmationNotification(booking);
+      } catch (error) {
+        console.error('Erreur notification client confirmation :', error);
+        notificationWarning = "Le statut a été mis à jour, mais la notification client n'a pas pu être envoyée.";
+      }
     }
 
     if (status === 'annulee') {
-      await logNotification({
-        bookingId: booking.id,
-        type: 'booking_cancelled',
-        recipient: booking.customer_phone,
-        payload: 'Réservation annulée',
-      });
+      try {
+        await logNotification({
+          bookingId: booking.id,
+          type: 'booking_cancelled',
+          recipient: booking.customer_phone,
+          payload: 'Réservation annulée',
+        });
+      } catch (error) {
+        console.error('Erreur log annulation réservation :', error);
+      }
     }
 
-    res.json({ booking, clientMessage, clientWhatsAppUrl });
+    res.json({
+      booking,
+      clientMessage,
+      clientWhatsAppUrl,
+      notificationWarning,
+    });
   } catch (error) {
     console.error('Erreur PATCH statut réservation :', error);
     res.status(500).json({
