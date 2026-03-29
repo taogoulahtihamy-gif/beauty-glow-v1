@@ -90,33 +90,29 @@ export default function AdminDashboardPage() {
     return items.filter((item) => (item.image_url || '').includes('/uploads/'));
   }, [content]);
 
-  const updateStatus = async (id, status) => {
-    setMessage('');
-    setUploadError('');
-    setUpdatingBookingId(id);
+ const updateStatus = async (id, status) => {
+  setMessage('');
+  setUploadError?.('');
 
-    try {
-      const data = await api.updateBookingStatus(id, status);
+  try {
+    const data = await api.updateBookingStatus(id, status);
 
-      if (data?.clientMessage) {
-        alert(`Message client prêt :\n\n${data.clientMessage}`);
-        if (data.clientWhatsAppUrl) {
-          window.open(data.clientWhatsAppUrl, '_blank');
-        }
-      }
-
+    if (data.clientMessage) {
       setMessage(
-        `Réservation ${status === 'confirmee' ? 'confirmée' : 'annulée'} avec succès.`
+        status === 'confirmee'
+          ? 'Réservation confirmée et notification envoyée.'
+          : 'Statut mis à jour.'
       );
-      await load();
-    } catch (error) {
-      console.error(error);
-      setUploadError(error.message || 'Impossible de mettre à jour la réservation.');
-    } finally {
-      setUpdatingBookingId(null);
+    } else {
+      setMessage('Statut mis à jour avec succès.');
     }
-  };
 
+    await load();
+  } catch (error) {
+    console.error(error);
+    setMessage(error.message || 'Erreur lors de la mise à jour du statut.');
+  }
+};
   const handleUploadAndAdd = async () => {
     setUploadError('');
     setMessage('');
@@ -264,7 +260,7 @@ export default function AdminDashboardPage() {
           <div>
             <span className="eyebrow">Admin</span>
             <h1>Dashboard admin</h1>
-            <p>Tu pilotes les réservations, les photos et le contenu sans aller dans le code.</p>
+            <p>Réservations et photos.</p>
             {message ? <p className="info-text">{message}</p> : null}
             {uploadError ? <p className="error-text">{uploadError}</p> : null}
           </div>
@@ -381,7 +377,7 @@ export default function AdminDashboardPage() {
                   {!filteredBookings.length ? (
                     <tr>
                       <td colSpan="7" className="empty-cell">
-                        Aucune réservation pour ce filtre.
+                        Aucune réservation.
                       </td>
                     </tr>
                   ) : null}
@@ -446,7 +442,7 @@ export default function AdminDashboardPage() {
                 ))
               ) : (
                 <div className="empty-cell mobile-empty-bookings">
-                  Aucune réservation pour ce filtre.
+                  Aucune réservation.
                 </div>
               )}
             </div>

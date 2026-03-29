@@ -12,11 +12,7 @@ export default function BookingPage() {
         <div>
           <span className="eyebrow">Réservation</span>
           <h1>Réservez votre créneau</h1>
-          <p>Le salon reçoit la réservation immédiatement. Ensuite, WhatsApp s’ouvre avec un message prêt à envoyer au salon.</p>
-          <div className="booking-side-note card compact-note">
-            <strong>Ce qui se passe ensuite</strong>
-            <p>Quand l’admin confirme la réservation dans son interface, un message de confirmation client est généré automatiquement côté backend.</p>
-          </div>
+          <p>Nous vous recontacterons.</p>
         </div>
         <BookingForm services={site?.services || []} />
       </div>
